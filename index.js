@@ -14,27 +14,27 @@ const isJsonString = (str) => {
 }
 
 wss.on('connection', (ws, req) => {
-  console.log('Connection url: %s', req.url);
-
   const app = (new URLSearchParams(req.url.replace(/^\/|\/$/g, ''))).get('app');
 
   if (app === null) {
+    console.log('Invalid client connection');
     ws.terminate();
   } else {
+    console.log('Client connected to %s', app);
     ws.app = app;
     clients.set(ws, app);
   }
 
   ws.on('error', console.error);
 
-  ws.on('message', (rawData) => {
-    if (!isJsonString(rawData)) return;
+  ws.on('message', (data, isBinary) => {
+    const message = isBinary ? data : data.toString();
+    if (!isJsonString(message)) return;
 
-    const data = JSON.parse(rawData);
-
+    const json = JSON.parse(message);
     clients.forEach((app, client) => {
-      if (app === data.app && client.readyState === WebSocket.OPEN) {
-        client.send(data.payload);
+      if (app === json.app && client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(json.payload));
       }
     });
   });
